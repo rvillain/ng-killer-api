@@ -7,6 +7,8 @@ var app = express(),
   Agent = require('./api/models/agentModel'),
   Action = require('./api/models/actionModel'),
   bodyParser = require('body-parser');
+  
+var server = require('http').createServer(app);
 
 port = process.env.PORT || 3000;
 
@@ -36,7 +38,53 @@ missionRoutes(app);
 gameRoutes(app);
 agentRoutes(app);
 
+var http = require('http');
+var fs = require('fs');
 
-app.listen(port);
+// Chargement de socket.io
+var io = require('socket.io').listen(server);
+
+// Quand un client se connecte, on le note dans la console
+io.sockets.on('connection', function (socket) {
+    console.log("Nouveau joueur !"); 
+    socket.on("ask-kill", function (killer) {
+      socket.broadcast.emit("ask-kill", killer);
+    });	
+    socket.on("confirm-kill", function (victim) {
+      Agent.findOne({target: victim._id}, function(err, agent){
+        agent.mission = victim.mission._id;
+        agent.target = victim.target._id;
+        agent.life = ((agent.life >= 5) ? 5 : (agent.life + 1));
+        victim.life = 0;
+        victim.status = 'dead';
+        victim.mission = null;
+        victim.target = null;
+
+        console.log("kill");
+
+        Agent.findByIdAndUpdate({_id: agent._id}, agent)
+        .exec(function(){
+          Agent.findOne({_id: agent._id})
+          .populate('game')
+          .populate('target')
+          .populate('mission')
+          .exec((err, a)=>{
+            socket.broadcast.emit("agent-update", a);
+          })
+        });
+        Agent.update({_id: victim._id}, victim).exec(function(err, res){});
+      });
+      socket.broadcast.emit("confirm-kill", victim);
+    });	
+    socket.on("unconfirm-kill", function (victim) {
+      console.log("kill non confirmé");
+      socket.broadcast.emit("unconfirm-kill", victim);
+    });
+});
+
+
+//server.listen(8080);
+
+server.listen(port);
 
 console.log('killer RESTful API server started on: ' + port);

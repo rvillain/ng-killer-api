@@ -14,4 +14,7 @@ module.exports = function(app) {
     
   app.route('/games/:gameId/start')
     .post(gameCtrl.start_a_game);
+
+  app.route('/games/:gameId/reinit')
+    .post(gameCtrl.reinit_a_game);
 };

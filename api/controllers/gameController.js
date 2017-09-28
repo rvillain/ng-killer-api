@@ -4,7 +4,8 @@
 var mongoose = require('mongoose'),
   Game = mongoose.model('Game'),
   Agent = mongoose.model('Agent'),
-  Mission = mongoose.model('Mission');
+  Mission = mongoose.model('Mission'),
+  Action = mongoose.model('Action');
 
 exports.list_all_games = function(req, res) {
   Game.find({}, function(err, game) {
@@ -94,13 +95,26 @@ exports.start_a_game = function(req, res) {
       });
     }
     game.status = "started";
-    Game.findOneAndUpdate({_id: req.params.gameId}, game, {new: false}, function(err, game) {
+    Game.findOneAndUpdate({_id: req.params.gameId}, game, {new: false}, function(err, g) {
       if (err)
         res.send(err);
       res.json(game);
     });
   });
 };
+
+exports.reinit_a_game = function(req, res) {
+  var gameId = req.params.gameId;
+  Agent.update({game: gameId}, {status: 'alive', mission: null, target: null, life: 3}, {multi: true}, (err, raw)=>{
+    
+  });
+  Game.findByIdAndUpdate(gameId, {status: "created"}, (err, g) => {
+    res.json(g);
+  })
+  Action.remove({game: req.body.gameId},(err, action)=>{
+
+  })
+}
 
 
 exports.delete_a_game = function(req, res) {
