@@ -111,7 +111,7 @@ exports.reinit_a_game = function(req, res) {
   Game.findByIdAndUpdate(gameId, {status: "created"}, (err, g) => {
     res.json(g);
   })
-  Action.remove({game: req.body.gameId},(err, action)=>{
+  Action.remove({game: gameId},(err, action)=>{
 
   })
 }

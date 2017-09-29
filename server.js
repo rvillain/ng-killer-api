@@ -7,6 +7,7 @@ var app = express(),
   Agent = require('./api/models/agentModel'),
   Action = require('./api/models/actionModel'),
   bodyParser = require('body-parser');
+var socketCtrl = require('./api/controllers/socketController');
   
 var server = require('http').createServer(app);
 
@@ -51,34 +52,30 @@ io.sockets.on('connection', function (socket) {
       socket.broadcast.emit("ask-kill", killer);
     });	
     socket.on("confirm-kill", function (victim) {
-      Agent.findOne({target: victim._id}, function(err, agent){
-        agent.mission = victim.mission._id;
-        agent.target = victim.target._id;
-        agent.life = ((agent.life >= 5) ? 5 : (agent.life + 1));
-        victim.life = 0;
-        victim.status = 'dead';
-        victim.mission = null;
-        victim.target = null;
-
-        console.log("kill");
-
-        Agent.findByIdAndUpdate({_id: agent._id}, agent)
-        .exec(function(){
-          Agent.findOne({_id: agent._id})
-          .populate('game')
-          .populate('target')
-          .populate('mission')
-          .exec((err, a)=>{
-            socket.broadcast.emit("agent-update", a);
-          })
-        });
-        Agent.update({_id: victim._id}, victim).exec(function(err, res){});
-      });
-      socket.broadcast.emit("confirm-kill", victim);
+      socketCtrl.kill(victim, socket);
     });	
     socket.on("unconfirm-kill", function (victim) {
       console.log("kill non confirmé");
       socket.broadcast.emit("unconfirm-kill", victim);
+    });
+
+    socket.on("ask-unmask", function (options) {
+      var agent = options.agent;
+      var name = options.name;
+      Agent.findOne({name: name}, (err, killer)=>{
+        if(killer.target == agent._id){
+          socket.broadcast.emit("ask-unmask", killer);
+        }
+      });
+      
+    });	
+    socket.on("confirm-unmask", function (victim) {
+      socketCtrl.unmask(victim, socket);
+    });	
+    socket.on("unconfirm-unmask", function (victim) {
+      console.log("Unmask non confirmé");
+      //TODO: gérer le cas d'une erreur d'unmask
+      socket.broadcast.emit("unconfirm-unmask", victim);
     });
 });
 
