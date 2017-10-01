@@ -43,6 +43,12 @@ exports.read_a_game = function(req, res) {
       path: 'target'
     }
   })
+  .populate({
+    path: 'actions',
+    populate: {
+      path: 'mission'
+    }
+  })
   .exec(function(err, game) {
     if (err)
       res.send(err);
@@ -109,7 +115,7 @@ exports.reinit_a_game = function(req, res) {
     
   });
   Game.findByIdAndUpdate(gameId, {status: "created"}, (err, g) => {
-    res.json(g);
+    res.json(g._doc);
   })
   Action.remove({game: gameId},(err, action)=>{
 
@@ -118,11 +124,16 @@ exports.reinit_a_game = function(req, res) {
 
 
 exports.delete_a_game = function(req, res) {
+  let gameId = req.params.gameId;
   Game.remove({
-    _id: req.params.gameId
+    _id: gameId
   }, function(err, game) {
     if (err)
       res.send(err);
+    
+    Action.remove({game: gameId},(err, action)=>{});
+    Agent.remove({game: gameId},(err, action)=>{});
+    Mission.remove({game: gameId},(err, action)=>{});
     res.json({ message: 'Game successfully deleted' });
   });
 };

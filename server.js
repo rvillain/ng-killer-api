@@ -45,9 +45,11 @@ var fs = require('fs');
 // Chargement de socket.io
 var io = require('socket.io').listen(server);
 
-// Quand un client se connecte, on le note dans la console
+// Quand un client se connecte
 io.sockets.on('connection', function (socket) {
-    console.log("Nouveau joueur !"); 
+    socket.on("new-agent", function (agent) {
+      socket.broadcast.emit("new-agent", agent);
+    });	
     socket.on("ask-kill", function (killer) {
       socket.broadcast.emit("ask-kill", killer);
     });	
@@ -63,8 +65,11 @@ io.sockets.on('connection', function (socket) {
       var agent = options.agent;
       var name = options.name;
       Agent.findOne({name: name}, (err, killer)=>{
-        if(killer.target == agent._id){
+        if(killer && killer.target == agent._id){
           socket.broadcast.emit("ask-unmask", killer);
+        }
+        else{
+          socketCtrl.wrongKiller(agent, socket);
         }
       });
       
@@ -77,6 +82,10 @@ io.sockets.on('connection', function (socket) {
       //TODO: gérer le cas d'une erreur d'unmask
       socket.broadcast.emit("unconfirm-unmask", victim);
     });
+
+    socket.on("game-status", function (game) {
+      socket.broadcast.emit("game-status", game);
+    });	
 });
 
 

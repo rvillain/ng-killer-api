@@ -22,6 +22,10 @@ var ActionSchema = new Schema({
   game: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'
+  },
+  mission: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Mission'
   }
 
 }, { toJSON: { virtuals: true } });
