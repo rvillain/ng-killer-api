@@ -82,6 +82,12 @@ io.sockets.on('connection', function (socket) {
       //TODO: gérer le cas d'une erreur d'unmask
       socket.broadcast.emit("unconfirm-unmask", victim);
     });
+    socket.on("change-mission", function (agent) {
+      socketCtrl.changeMission(agent, socket);
+    });	
+    socket.on("suicide", function (agent) {
+      socketCtrl.suicide(agent, socket);
+    });	
 
     socket.on("game-status", function (game) {
       socket.broadcast.emit("game-status", game);

@@ -3,7 +3,40 @@
 var mongoose = require('mongoose'),
 Agent = mongoose.model('Agent'),
 Game = mongoose.model('Game'),
-Action = mongoose.model('Action');
+Action = mongoose.model('Action'),
+Mission = mongoose.model('Mission');
+
+exports.changeMission = function (agent, socket){
+  Mission.find({game: agent.game._id, used: false}, (err, missions) => {
+    if(missions && missions.length > 0){
+      let mission = missions[0];
+      mission.used = true;
+      Mission.update({_id: mission._id}, mission, (err, m)=>{
+        if(err)
+          console.log(err);
+      });
+      agent.mission = mission._id;
+      agent.life --;
+    }
+    updateAgent(socket, agent, null, {broadcast: false});
+  })
+}
+exports.suicide = function (agent, socket){
+  Agent.findOne({target: agent._id}, (err, killer) => {
+    killer = killer.toObject();
+    killer.target = agent.target._id;
+    updateAgent(socket, killer, null);
+    agent.life = 0;
+    agent.status = 'dead';
+    updateAgent(socket, agent, null, {broadcast: false});
+    var newAction = new Action();
+    newAction.game = agent.game._id;
+    newAction.killer = agent._id;
+    newAction.type = "suicide";
+    addAction(socket, newAction);
+    socket.broadcast.emit("suicide", agent);
+  })
+}
 
 exports.kill = function(victim, socket) {
     Agent.findOne({target: victim._id}).exec(function(err, agent){
@@ -112,14 +145,19 @@ var addAction = function(socket, newAction){
   });
 }
 
-var updateAgent = function(socket, agent, callback){
+var updateAgent = function(socket, agent, callback, options){
   Agent.findByIdAndUpdate(agent._id, agent, {new: true})
   .populate('game')
   .populate('target')
   .populate('mission')
   .exec((err, a) => {
     a = a.toObject();
-    socket.broadcast.emit("agent-update", a);
+    if(options && options.broadcast == false){
+      socket.emit("agent-update", a);
+    }
+    else{
+      socket.broadcast.emit("agent-update", a);
+    }
     if(callback){
       callback(a);
     }

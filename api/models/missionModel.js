@@ -22,6 +22,10 @@ var MissionSchema = new Schema({
   game: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'
+  },
+  used: {
+    type: Boolean,
+    default: false
   }
 });
 

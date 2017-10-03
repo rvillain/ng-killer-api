@@ -95,6 +95,7 @@ exports.start_a_game = function(req, res) {
           res.send(err);
       });
       mission.agent = sourceAgent._id;
+      mission.used = true;
       Mission.update({_id: mission._id}, mission, function(err, a){
         if (err)
           res.send(err);
@@ -124,6 +125,9 @@ exports.reinit_a_game = function(req, res) {
   Action.remove({game: gameId},(err, action)=>{
 
   })
+  Mission.update({game: gameId}, {used: false}, {multi: true}, (err, raw)=>{
+    
+  });
 }
 
 
