@@ -64,7 +64,7 @@ io.sockets.on('connection', function (socket) {
     socket.on("ask-unmask", function (options) {
       var agent = options.agent;
       var name = options.name;
-      Agent.findOne({name: name}, (err, killer)=>{
+      Agent.findOne({name: { $regex : new RegExp(name, "i") }}, (err, killer)=>{
         if(killer && killer.target == agent._id){
           socket.broadcast.emit("ask-unmask", killer);
         }

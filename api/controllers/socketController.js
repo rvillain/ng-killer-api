@@ -7,13 +7,14 @@ Action = mongoose.model('Action');
 
 exports.kill = function(victim, socket) {
     Agent.findOne({target: victim._id}).exec(function(err, agent){
+      
+        let currentMission = agent.mission;
         agent = agent.toObject();
         agent.mission = victim.mission._id;
         agent.target = victim.target._id;
         agent.life = ((agent.life >= 5) ? 5 : (agent.life + 1));
         victim.life = 0;
         victim.status = 'dead';
-        let victimMission = victim.mission._id;
         victim.mission = null;
         victim.target = null;
 
@@ -25,7 +26,7 @@ exports.kill = function(victim, socket) {
           newAction.target = victim._id;
           newAction.killer = agent._id;
           newAction.type = "kill";
-          newAction.mission = victimMission;
+          newAction.mission = currentMission;
           addAction(socket, newAction);
         })
         updateAgent(socket, victim);
@@ -42,8 +43,8 @@ exports.unmask = function(victim, socket) {
         killer.target = target._id;
 
         Agent.findById(target,(err, t) => {
-          target.life = ((target.life >= 5) ? 5 : (target.life + 1));
-          updateAgent(socket, target);
+          t.life = ((t.life >= 5) ? 5 : (t.life + 1));
+          updateAgent(socket, t);
         });
         
         socket.broadcast.emit("confirm-unmask", victim);
@@ -68,6 +69,7 @@ exports.unmask = function(victim, socket) {
 };
 
 exports.wrongKiller = function(agent, socket){
+  socket.emit("wrong-killer", agent);
   removeLifePoint(agent);
   if(agent.life == 0){
     agent.status = 'dead'

@@ -105,6 +105,10 @@ exports.start_a_game = function(req, res) {
       if (err)
         res.send(err);
       res.json(game);
+      var newAction = new Action();
+      newAction.game = g._id;
+      newAction.type = "game_started";
+      newAction.save(function(err, a) {});
     });
   });
 };
