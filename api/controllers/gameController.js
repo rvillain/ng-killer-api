@@ -130,6 +130,18 @@ exports.reinit_a_game = function(req, res) {
   });
 }
 
+exports.add_missions = function(req, res){
+  var gameId = req.params.gameId;
+  var missions = req.body.missions;
+  missions.forEach(function(mission) {
+    var new_mission = new Mission();
+    new_mission.title = mission.title;
+    new_mission.difficulty = mission.difficulty;
+    new_mission.game = gameId;
+    new_mission.save(function(err, game) {});
+  }, this);
+  exports.read_a_game(req, res);
+}
 
 exports.delete_a_game = function(req, res) {
   let gameId = req.params.gameId;

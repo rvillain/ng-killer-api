@@ -48,17 +48,19 @@ var io = require('socket.io').listen(server);
 // Quand un client se connecte
 io.sockets.on('connection', function (socket) {
     socket.on("new-agent", function (agent) {
-      socket.broadcast.emit("new-agent", agent);
+      socket.in(agent.game).broadcast.emit("new-agent", agent);
+      
     });	
+
     socket.on("ask-kill", function (killer) {
-      socket.broadcast.emit("ask-kill", killer);
+      socket.in(socket.rooms[1]).broadcast.emit("ask-kill", killer);
     });	
     socket.on("confirm-kill", function (victim) {
       socketCtrl.kill(victim, socket);
     });	
     socket.on("unconfirm-kill", function (victim) {
       console.log("kill non confirmé");
-      socket.broadcast.emit("unconfirm-kill", victim);
+      socket.in(socket.rooms[1]).broadcast.emit("unconfirm-kill", victim);
     });
 
     socket.on("ask-unmask", function (options) {
@@ -66,7 +68,7 @@ io.sockets.on('connection', function (socket) {
       var name = options.name;
       Agent.findOne({name: { $regex : new RegExp(name, "i") }}, (err, killer)=>{
         if(killer && killer.target == agent._id){
-          socket.broadcast.emit("ask-unmask", killer);
+          socket.in(socket.rooms[1]).broadcast.emit("ask-unmask", killer);
         }
         else{
           socketCtrl.wrongKiller(agent, socket);
@@ -80,17 +82,23 @@ io.sockets.on('connection', function (socket) {
     socket.on("unconfirm-unmask", function (victim) {
       console.log("Unmask non confirmé");
       //TODO: gérer le cas d'une erreur d'unmask
-      socket.broadcast.emit("unconfirm-unmask", victim);
+      socket.in(socket.rooms[1]).broadcast.emit("unconfirm-unmask", victim);
     });
     socket.on("change-mission", function (agent) {
       socketCtrl.changeMission(agent, socket);
     });	
     socket.on("suicide", function (agent) {
       socketCtrl.suicide(agent, socket);
+    });
+    	
+    socket.on("join-room", function (game) {
+      if(socket.rooms)
+          socket.leave(socket.rooms);
+      var gameId = game._id;
+      socket.join(gameId);
     });	
-
     socket.on("game-status", function (game) {
-      socket.broadcast.emit("game-status", game);
+      socket.in(game._id).broadcast.emit("game-status", game);
     });	
 });
 

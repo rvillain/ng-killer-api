@@ -34,6 +34,7 @@ exports.suicide = function (agent, socket){
     newAction.killer = agent._id;
     newAction.type = "suicide";
     addAction(socket, newAction);
+    console.log(socket.room);
     socket.broadcast.emit("suicide", agent);
   })
 }

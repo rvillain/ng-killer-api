@@ -13,11 +13,9 @@ var MissionSchema = new Schema({
     default: Date.now
   },
   difficulty: {
-    type: [{
-      type: String,
-      enum: ['action', 'manipulation', 'hardcore']
-    }],
-    default: ['action']
+    type: String,
+    enum: ['action', 'manipulation', 'hardcore'],
+    default: 'action'
   },
   game: { 
       type: mongoose.Schema.Types.ObjectId,
