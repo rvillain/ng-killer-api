@@ -6,6 +6,8 @@ var app = express(),
   Game = require('./api/models/gameModel'),
   Agent = require('./api/models/agentModel'),
   Action = require('./api/models/actionModel'),
+  Tribunal = require('./api/models/tribunalModel'),
+  Vote = require('./api/models/voteModel'),
   bodyParser = require('body-parser');
 var socketCtrl = require('./api/controllers/socketController');
   
@@ -49,18 +51,21 @@ var io = require('socket.io').listen(server);
 io.sockets.on('connection', function (socket) {
     socket.on("new-agent", function (agent) {
       socket.in(agent.game).broadcast.emit("new-agent", agent);
-      
     });	
-
     socket.on("ask-kill", function (killer) {
-      socket.in(socket.rooms[1]).broadcast.emit("ask-kill", killer);
+      console.log(socketCtrl.getRoom(socket));
+      socket.in(socketCtrl.getRoom(socket)).broadcast.emit("ask-kill", killer);
     });	
     socket.on("confirm-kill", function (victim) {
       socketCtrl.kill(victim, socket);
     });	
     socket.on("unconfirm-kill", function (victim) {
       console.log("kill non confirmé");
-      socket.in(socket.rooms[1]).broadcast.emit("unconfirm-kill", victim);
+      socket.in(socketCtrl.getRoom(socket)).broadcast.emit("unconfirm-kill", victim);
+      //Tribunal
+      Agent.findOne({target: victim._id}, function(err, killer){
+        socketCtrl.startTribunal(socket, {killer: killer, target: victim});
+      });
     });
 
     socket.on("ask-unmask", function (options) {
@@ -68,7 +73,7 @@ io.sockets.on('connection', function (socket) {
       var name = options.name;
       Agent.findOne({name: { $regex : new RegExp(name, "i") }}, (err, killer)=>{
         if(killer && killer.target == agent._id){
-          socket.in(socket.rooms[1]).broadcast.emit("ask-unmask", killer);
+          socket.in(socketCtrl.getRoom(socket)).broadcast.emit("ask-unmask", killer);
         }
         else{
           socketCtrl.wrongKiller(agent, socket);
@@ -81,8 +86,12 @@ io.sockets.on('connection', function (socket) {
     });	
     socket.on("unconfirm-unmask", function (victim) {
       console.log("Unmask non confirmé");
-      //TODO: gérer le cas d'une erreur d'unmask
-      socket.in(socket.rooms[1]).broadcast.emit("unconfirm-unmask", victim);
+      socket.in(socketCtrl.getRoom(socket)).broadcast.emit("unconfirm-unmask", victim);
+      //Tribunal
+      socketCtrl.startTribunal(socket, {killer: victim, target: victim.target});
+      // Agent.findOne({target: victim._id}, function(err, killer){
+      // });
+      
     });
     socket.on("change-mission", function (agent) {
       socketCtrl.changeMission(agent, socket);
@@ -91,14 +100,13 @@ io.sockets.on('connection', function (socket) {
       socketCtrl.suicide(agent, socket);
     });
     	
-    socket.on("join-room", function (game) {
-      if(socket.rooms)
-          socket.leave(socket.rooms);
-      var gameId = game._id;
+    socket.on("join-room", function (gameId) {
+      if(socket.rooms[gameId])
+          socket.leave(gameId);
       socket.join(gameId);
     });	
     socket.on("game-status", function (game) {
-      socket.in(game._id).broadcast.emit("game-status", game);
+      socket.in(socketCtrl.getRoom(socket)).broadcast.emit("game-status", game);
     });	
 });
 

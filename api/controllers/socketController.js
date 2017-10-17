@@ -4,8 +4,20 @@ var mongoose = require('mongoose'),
 Agent = mongoose.model('Agent'),
 Game = mongoose.model('Game'),
 Action = mongoose.model('Action'),
-Mission = mongoose.model('Mission');
+Mission = mongoose.model('Mission'),
+Tribunal = mongoose.model('Tribunal'),
+Vote = mongoose.model('Vote');
 
+exports.getRoom = function(socket){
+  for (var key in socket.rooms) {
+    if (socket.rooms.hasOwnProperty(key)) {
+        if (key.length > 20) {
+           return key;
+        }
+    }
+  }
+  return null;
+}
 exports.changeMission = function (agent, socket){
   Mission.find({game: agent.game._id, used: false}, (err, missions) => {
     if(missions && missions.length > 0){
@@ -35,7 +47,7 @@ exports.suicide = function (agent, socket){
     newAction.type = "suicide";
     addAction(socket, newAction);
     console.log(socket.room);
-    socket.broadcast.emit("suicide", agent);
+    broadcast(socket, "suicide", agent);
   })
 }
 
@@ -65,7 +77,7 @@ exports.kill = function(victim, socket) {
         })
         updateAgent(socket, victim);
     });
-    socket.broadcast.emit("confirm-kill", victim);
+    broadcast(socket, "confirm-kill", victim);
 };
 
 exports.unmask = function(victim, socket) {
@@ -80,8 +92,8 @@ exports.unmask = function(victim, socket) {
           t.life = ((t.life >= 5) ? 5 : (t.life + 1));
           updateAgent(socket, t);
         });
-        
-        socket.broadcast.emit("confirm-unmask", victim);
+
+        broadcast(socket, "confirm-unmask", victim);
 
         victim.life = 0;
         victim.status = 'dead';
@@ -134,6 +146,21 @@ exports.wrongKiller = function(agent, socket){
   }
 }
 
+exports.startTribunal = function(socket, agents){
+  var newTribunal = new Tribunal();
+  newTribunal.killer = agents.killer._id;
+  newTribunal.target = agents.target._id;
+  newTribunal.game = exports.getRoom(socket);
+  Tribunal.create(newTribunal,(err, t) => {
+    updateTribunal(t, socket);
+    //Init period: 1 minute
+    setTimeout(function () {
+      t.status = "started";
+      updateTribunal(t, socket);
+    }, 6000)
+  });
+}
+
 var addAction = function(socket, newAction){
   Action.create(newAction, (err, action) => {
     Action.findOne({_id: action._id})
@@ -141,7 +168,7 @@ var addAction = function(socket, newAction){
       .populate("target")
       .populate('mission')
       .exec((err, a) => {
-      socket.broadcast.emit("new-action", a);
+        broadcast(socket, "new-action", a);
     });
   });
 }
@@ -157,12 +184,27 @@ var updateAgent = function(socket, agent, callback, options){
       socket.emit("agent-update", a);
     }
     else{
-      socket.broadcast.emit("agent-update", a);
+      broadcast(socket, "agent-update", a);
     }
     if(callback){
       callback(a);
     }
   });
+}
+
+var updateTribunal = function (tribunal, socket){
+  Tribunal.findByIdAndUpdate(tribunal._id, tribunal, {new: true})
+  .populate('game')
+  .populate('target')
+  .populate('killer')
+  .populate('votes')
+  .exec((err, t) => {
+    t = t.toObject();
+    console.log("tribunal " + t.status);
+    broadcast(socket, "tribunal-status", t);
+    socket.emit("tribunal-status", t);
+  });
+  
 }
 
 var addLifePoint = function(agent){
@@ -172,4 +214,8 @@ var addLifePoint = function(agent){
 var removeLifePoint = function(agent){
   agent.life = ((agent.life <= 0) ? 0 : (agent.life - 1));
 
+}
+
+var broadcast = function (socket, method, param){
+  socket.in(exports.getRoom(socket)).broadcast.emit(method, param);
 }

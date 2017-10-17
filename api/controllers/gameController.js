@@ -5,6 +5,8 @@ var mongoose = require('mongoose'),
   Game = mongoose.model('Game'),
   Agent = mongoose.model('Agent'),
   Mission = mongoose.model('Mission'),
+  Tribunal = mongoose.model('Tribunal'),
+  Vote = mongoose.model('Vote'),
   Action = mongoose.model('Action');
 
 exports.list_all_games = function(req, res) {
@@ -122,12 +124,10 @@ exports.reinit_a_game = function(req, res) {
   Game.findByIdAndUpdate(gameId, {status: "created"}, (err, g) => {
     res.json(g._doc);
   })
-  Action.remove({game: gameId},(err, action)=>{
-
-  })
-  Mission.update({game: gameId}, {used: false}, {multi: true}, (err, raw)=>{
-    
-  });
+  Action.remove({game: gameId},(err, action)=>{});
+  Tribunal.remove({game: gameId},(err, action)=>{});
+  Vote.remove({game: gameId},(err, action)=>{});
+  Mission.update({game: gameId}, {used: false}, {multi: true}, (err, raw)=>{});
 }
 
 exports.add_missions = function(req, res){
@@ -154,6 +154,8 @@ exports.delete_a_game = function(req, res) {
     Action.remove({game: gameId},(err, action)=>{});
     Agent.remove({game: gameId},(err, action)=>{});
     Mission.remove({game: gameId},(err, action)=>{});
+    Tribunal.remove({game: gameId},(err, action)=>{});
+    Vote.remove({game: gameId},(err, action)=>{});
     res.json({ message: 'Game successfully deleted' });
   });
 };
