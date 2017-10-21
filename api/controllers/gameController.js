@@ -104,7 +104,7 @@ exports.start_a_game = function(req, res) {
       });
     }
     game.status = "started";
-    Game.findOneAndUpdate({_id: req.params.gameId}, game, {new: false}, function(err, g) {
+    Game.findOneAndUpdate({_id: req.params.gameId}, game, {new: true}, function(err, g) {
       if (err)
         res.send(err);
       res.json(game);

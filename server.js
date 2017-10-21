@@ -53,7 +53,6 @@ io.sockets.on('connection', function (socket) {
       socket.in(agent.game).broadcast.emit("new-agent", agent);
     });	
     socket.on("ask-kill", function (killer) {
-      console.log(socketCtrl.getRoom(socket));
       socket.in(socketCtrl.getRoom(socket)).broadcast.emit("ask-kill", killer);
     });	
     socket.on("confirm-kill", function (victim) {
@@ -71,15 +70,27 @@ io.sockets.on('connection', function (socket) {
     socket.on("ask-unmask", function (options) {
       var agent = options.agent;
       var name = options.name;
-      Agent.findOne({name: { $regex : new RegExp(name, "i") }}, (err, killer)=>{
-        if(killer && killer.target == agent._id){
-          socket.in(socketCtrl.getRoom(socket)).broadcast.emit("ask-unmask", killer);
+      Game.findById({_id: agent.game._id})
+      .populate('agents')
+      .populate('missions')
+      .exec(function(err, game) 
+      {
+        //Check alive agent count
+        let aliveAgents = game.agents.filter(a=>a.status=='alive').length;
+        if(aliveAgents > 5){
+          Agent.findOne({name: { $regex : new RegExp(name, "i") }}, (err, killer)=>{
+            if(killer && killer.target == agent._id){
+              socket.in(socketCtrl.getRoom(socket)).broadcast.emit("ask-unmask", killer);
+            }
+            else{
+              socketCtrl.wrongKiller(agent, socket);
+            }
+          });
         }
         else{
-          socketCtrl.wrongKiller(agent, socket);
+          socket.emit("action-error", "Impossible de démasquer, vous êtes entré en phase finale");
         }
       });
-      
     });	
     socket.on("confirm-unmask", function (victim) {
       socketCtrl.unmask(victim, socket);

@@ -27,19 +27,28 @@ exports.create_an_agent = function(req, res) {
   var new_agent = new Agent(req.body);
   new_agent.code = makeid();
   new_agent.game = req.body.game._id;
-  
-  Agent.findOne({game: new_agent.game, name: { $regex : new RegExp(new_agent.name, "i") }},(err, a) => {
-    if(a)
-    {
-      res.status(500).send({error: 'Ce pseudo est déjà pris'});
-      //res.json(new Error("Ce pseudo est déjà pris."));
+  Game.findById(new_agent.game, (errGame, game) =>{
+    if(!game){
+      res.status(500).send({error: 'Cette partie n\'existe pas'});
+    }
+    else if(game.status!='created'){
+      res.status(500).send({error: 'Cette partie a déjà commencée'});
     }
     else{
-      new_agent.save(function(err, agent) {
-        if (err)
-          res.send(err);
-        res.json(agent);
-      });
+      Agent.findOne({game: new_agent.game, name: { $regex : new RegExp(new_agent.name, "i") }},(err, a) => {
+        if(a)
+        {
+          res.status(500).send({error: 'Ce pseudo est déjà pris'});
+          //res.json(new Error("Ce pseudo est déjà pris."));
+        }
+        else{
+          new_agent.save(function(err, agent) {
+            if (err)
+              res.send(err);
+            res.json(agent);
+          });
+        }
+      })
     }
   })
 };
