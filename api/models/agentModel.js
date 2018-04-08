@@ -32,6 +32,9 @@ var AgentSchema = new Schema({
   code: {
     type: String
   },
+  photo: {
+    type: String
+  },
   game: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'

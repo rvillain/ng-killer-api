@@ -11,4 +11,7 @@ module.exports = function(app) {
     .get(agentCtrl.read_an_agent)
     .put(agentCtrl.update_an_agent)
     .delete(agentCtrl.delete_an_agent);
+
+    app.route('/agents/:agentId/getForUnmask')
+      .get(agentCtrl.get_for_unmask);
 };
